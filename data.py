@@ -1,20 +1,43 @@
 import pandas as pd
 import numpy as np
+import os
 
-def load_covid_data(country: str, path: str = "covid_data.csv", buffer_days: int = 10):
+def load_covid_data(country: str, path: str = None, buffer_days: int = 10):
     """
-    Загружает данные для указанной страны
+    Загружает данные для указанной страны из Our World in Data.
     - Сортируем по дате 
     - Оставляем только дни, где >= 100 случаев.
     - Добавляем buffer_days перед первым днём (инфекции могли начаться раньше).
     - Гарантируем отсутствие отрицательных значений.
     """
+    # Если путь не указан, используем данные из project-example
+    if path is None:
+        path = "project-example/data/owid-covid-data.csv"
+    
+    # Проверяем существование файла
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Файл данных не найден: {path}")
+    
+    # Загружаем данные
     df = pd.read_csv(path, parse_dates=["date"])
-    df = df[df["country"] == country].copy()
+    
+    # Фильтруем по стране
+    df = df[df["location"] == country].copy()
+    
+    if len(df) == 0:
+        raise ValueError(f"Данные для страны '{country}' не найдены")
+    
+    # Сортируем по дате
     df = df.sort_values("date").reset_index(drop=True)
+    
+    # Оставляем только дни с >= 100 случаев
     start_index = df.loc[df["new_cases"] >= 100].index.min()
+    if pd.isna(start_index):
+        raise ValueError(f"Нет дней с >= 100 случаев для страны '{country}'")
+    
     df = df.loc[start_index:].reset_index(drop=True)
-
+    
+    # Добавляем buffer_days
     first_date = df["date"].iloc[0]
     buffer_dates = pd.date_range(start=first_date - pd.Timedelta(days=buffer_days),
                                  end=first_date - pd.Timedelta(days=1))
@@ -22,11 +45,31 @@ def load_covid_data(country: str, path: str = "covid_data.csv", buffer_days: int
         "date": buffer_dates,
         "new_cases": [0] * len(buffer_dates),
         "total_tests": [0] * len(buffer_dates),
-        "country": country
+        "location": country
     })
 
     df = pd.concat([buffer_df, df], ignore_index=True)
     df = df.set_index("date")
-    df["new_cases"] = df["new_cases"].clip(lower=0)
+    
+    # Очищаем данные
+    df["new_cases"] = df["new_cases"].fillna(0).clip(lower=0)
+    df["total_tests"] = df["total_tests"].fillna(0).clip(lower=0)
+    
+    # Переименовываем колонки для совместимости
+    df = df.rename(columns={"location": "country"})
 
     return df
+
+
+def get_available_countries(path: str = None):
+    """
+    Возвращает список доступных стран в данных.
+    """
+    if path is None:
+        path = "project-example/data/owid-covid-data.csv"
+    
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Файл данных не найден: {path}")
+    
+    df = pd.read_csv(path)
+    return sorted(df["location"].unique().tolist())

@@ -5,8 +5,12 @@ import pandas as pd
 from scipy import stats as sps
 import pytensor
 import pytensor.tensor as pt
-from pytensor.tensor.signal.conv import conv2d
+import jax.numpy as jnp
+from jax.scipy.signal import convolve
 
+def jax_conv2d(inputs, filters):
+    """2D convolution using JAX that works with PyTensor"""
+    return convolve(inputs, filters, mode='full', method='auto')
 
 def get_generation_time_interval():
     """
@@ -91,10 +95,9 @@ def build_model(observed_df):
         # Свертка инфекций с распределением задержки
         test_adjusted_positive = pm.Deterministic(
             "test_adjusted_positive",
-            conv2d(
-                pt.reshape(infections, (1, len_obs)),
-                pt.reshape(p_delay, (1, len(p_delay))),
-                border_mode="full",
+            jax_conv2d(
+                infections.reshape((1, len_obs)),
+                p_delay.reshape((1, len(p_delay)))
             )[0, :len_obs],
             dims="date"
         )
