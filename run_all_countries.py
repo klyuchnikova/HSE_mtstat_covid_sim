@@ -7,6 +7,9 @@ import os
 import time
 from datetime import datetime
 
+import pymc as pm
+import arviz as az
+
 from data import load_covid_data, get_available_countries
 from model import build_model, fit_model, get_rt_estimates
 from eval import (plot_rt_timeline, plot_forecast_comparison, calculate_metrics,
@@ -175,8 +178,4 @@ def main():
     print(f"Время завершения: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
-    # Импорты для main
-    import pymc as pm
-    import arviz as az
-    
     main()

@@ -10,16 +10,21 @@ def load_covid_data(country: str, path: str = None, buffer_days: int = 10):
     - Добавляем buffer_days перед первым днём (инфекции могли начаться раньше).
     - Гарантируем отсутствие отрицательных значений.
     """
-    # Если путь не указан, используем данные из project-example
+    # Если путь не указан, используем данные из текущей папки
     if path is None:
-        path = "project-example/data/owid-covid-data.csv"
+        path = "data/owid-covid-data.csv"
     
     # Проверяем существование файла
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Файл данных не найден: {path}")
-    
-    # Загружаем данные
-    df = pd.read_csv(path, parse_dates=["date"])
+        print(f"Локальный файл не найден: {path}")
+        print("Загружаем данные из интернета...")
+        # Загружаем данные напрямую из интернета
+        url = "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+        df = pd.read_csv(url, parse_dates=["date"])
+        print("✓ Данные загружены из интернета")
+    else:
+        # Загружаем данные из локального файла
+        df = pd.read_csv(path, parse_dates=["date"])
     
     # Фильтруем по стране
     df = df[df["location"] == country].copy()
@@ -66,10 +71,16 @@ def get_available_countries(path: str = None):
     Возвращает список доступных стран в данных.
     """
     if path is None:
-        path = "project-example/data/owid-covid-data.csv"
+        path = "data/owid-covid-data.csv"
     
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Файл данных не найден: {path}")
-    
-    df = pd.read_csv(path)
+        print(f"Локальный файл не найден: {path}")
+        print("Загружаем данные из интернета...")
+        # Загружаем данные напрямую из интернета
+        url = "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+        df = pd.read_csv(url)
+        print("✓ Данные загружены из интернета")
+    else:
+        # Загружаем данные из локального файла
+        df = pd.read_csv(path)
     return sorted(df["location"].unique().tolist())
